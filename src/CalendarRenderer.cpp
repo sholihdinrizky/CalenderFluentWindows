@@ -134,9 +134,9 @@ void CalendarRenderer::CalculateLayout(int width, int height) {
     if (m_metrics.circleDiameter < Scale(24, dpi)) m_metrics.circleDiameter = Scale(24, dpi);
 
     // 4. Bottom Full-Date Display
-    int bottomSpacing = Scale(6, dpi);   // was 12 — reduced to remove excess whitespace
+    int bottomSpacing = Scale(8, dpi);   // comfortable spacing from grid to full date
     int bottomTop = m_metrics.gridRect.bottom + bottomSpacing;
-    int bottomHeight = Scale(26, dpi);   // was 32 — slightly tighter
+    int bottomHeight = Scale(24, dpi);   // height for 13pt Segoe UI Variable
 
     m_metrics.bottomDateRect = {
         m_metrics.paddingH,
@@ -145,8 +145,9 @@ void CalendarRenderer::CalculateLayout(int width, int height) {
         bottomTop + bottomHeight
     };
 
-    // Store the computed minimum window height so CalendarWindow can query it
-    m_metrics.computedHeight = bottomTop + bottomHeight + Scale(10, dpi); // 10px bottom padding
+    // Balanced bottom padding: exactly equal to top padding (m_metrics.paddingV)
+    m_metrics.computedHeight = bottomTop + bottomHeight + m_metrics.paddingV;
+    m_metrics.height = m_metrics.computedHeight;
 }
 
 int CalendarRenderer::HitTestCell(POINT pt) const {
@@ -355,10 +356,9 @@ void CalendarRenderer::Render(
 
         if (cell.isToday) {
             // Today's date always receives circular accent highlight.
-            // On hover: draw a slightly lighter outer ring to show interactivity.
+            // On hover: draw a subtle outer ring to show interactivity.
             if (isHovered) {
-                // Draw a slightly larger, semi-transparent ring around the accent circle
-                DrawFilledCircle(memDC, cx, cy, m_metrics.circleDiameter + Scale(4, m_metrics.dpi), theme.normalHoverBg);
+                DrawFilledCircle(memDC, cx, cy, m_metrics.circleDiameter + Scale(2, m_metrics.dpi), theme.normalHoverBg);
             }
             DrawFilledCircle(memDC, cx, cy, m_metrics.circleDiameter, theme.accentColor);
             textColor = theme.accentTextColor;

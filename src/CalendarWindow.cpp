@@ -63,7 +63,8 @@ bool CalendarWindow::Create() {
 
     m_currentDpi = GetWindowDpi(nullptr);
     int width = MulDiv(340, m_currentDpi, 96);
-    int height = MulDiv(390, m_currentDpi, 96); // reduced from 420
+    m_renderer.UpdateDpi(m_currentDpi, width, 0);
+    int height = m_renderer.GetMetrics().computedHeight;
 
     // WS_EX_TOOLWINDOW prevents showing up in the taskbar and Alt+Tab
     // WS_EX_TOPMOST keeps it on top of other desktop windows when active
@@ -104,9 +105,9 @@ void CalendarWindow::UpdateDwmAttributes() {
 void CalendarWindow::RecalculateSizeAndDpi() {
     m_currentDpi = GetWindowDpi(m_hwnd);
     int width = MulDiv(340, m_currentDpi, 96);
-    int height = MulDiv(390, m_currentDpi, 96); // matches Create() height
+    m_renderer.UpdateDpi(m_currentDpi, width, 0);
+    int height = m_renderer.GetMetrics().computedHeight;
     SetWindowPos(m_hwnd, nullptr, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
-    m_renderer.UpdateDpi(m_currentDpi, width, height);
 }
 
 void CalendarWindow::PositionNearTray(POINT trayPt) {
@@ -144,25 +145,28 @@ void CalendarWindow::PositionNearTray(POINT trayPt) {
     if (posY + winH > rcWork.bottom) posY = rcWork.bottom - winH - MulDiv(8, m_currentDpi, 96);
     if (posY < rcWork.top) posY = rcWork.top + MulDiv(8, m_currentDpi, 96);
 
-    SetWindowPos(m_hwnd, HWND_TOPMOST, posX, posY, winW, winH, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    // Position window off-screen/silently without SWP_SHOWWINDOW
+    // so AnimateWindow can smoothly slide it into view without visual jumps
+    SetWindowPos(m_hwnd, HWND_TOPMOST, posX, posY, winW, winH, SWP_NOACTIVATE);
 }
 
 void CalendarWindow::Show(bool show) {
     if (show) {
+        if (IsVisible()) return;
         m_themeManager.RefreshTheme();
         m_dateService.RefreshCurrentDate();
         UpdateDwmAttributes();
         PositionNearTray();
-        // AnimateWindow slides the popup up from the tray area.
+        // AnimateWindow slides the popup up smoothly from the tray area.
         // AW_SLIDE | AW_VER_NEGATIVE = slide upward (toward the top of the screen).
-        // Duration 150ms: short and snappy, feels native.
-        // No background thread or timer is needed — this is a single blocking OS call
-        // that uses zero CPU while the window is idle afterward.
-        AnimateWindow(m_hwnd, 150, AW_SLIDE | AW_VER_NEGATIVE | AW_ACTIVATE);
+        // 120ms: snappy and responsive, matching Windows 11 flyout feel.
+        // No background thread or timer needed — zero idle CPU.
+        AnimateWindow(m_hwnd, 120, AW_SLIDE | AW_VER_NEGATIVE | AW_ACTIVATE);
         UpdateWindow(m_hwnd);
     } else {
+        if (!IsVisible()) return;
         // AW_SLIDE | AW_VER_POSITIVE | AW_HIDE = slide downward and hide.
-        // 100ms close is slightly faster than open for a snappier feel.
+        // 100ms close: fast and clean dismissal.
         AnimateWindow(m_hwnd, 100, AW_SLIDE | AW_VER_POSITIVE | AW_HIDE);
     }
 }
