@@ -170,7 +170,7 @@ std::wstring DateService::GetFormattedFullDate() const {
 
     std::wstringstream ss;
     if (w >= 0 && w <= 6 && m_currentMonth >= 1 && m_currentMonth <= 12) {
-        ss << weekdayNames[w] << L", " << monthNames[m_currentMonth - 1] << L" " << m_currentDay << L", " << m_currentYear;
+        ss << weekdayNames[w] << L", " << m_currentDay << L" " << monthNames[m_currentMonth - 1] << L" " << m_currentYear;
     }
     return ss.str();
 }

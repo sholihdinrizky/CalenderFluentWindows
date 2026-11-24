@@ -134,9 +134,9 @@ void CalendarRenderer::CalculateLayout(int width, int height) {
     if (m_metrics.circleDiameter < Scale(24, dpi)) m_metrics.circleDiameter = Scale(24, dpi);
 
     // 4. Bottom Full-Date Display
-    int bottomSpacing = Scale(12, dpi);
+    int bottomSpacing = Scale(6, dpi);   // was 12 — reduced to remove excess whitespace
     int bottomTop = m_metrics.gridRect.bottom + bottomSpacing;
-    int bottomHeight = Scale(32, dpi);
+    int bottomHeight = Scale(26, dpi);   // was 32 — slightly tighter
 
     m_metrics.bottomDateRect = {
         m_metrics.paddingH,
@@ -144,6 +144,9 @@ void CalendarRenderer::CalculateLayout(int width, int height) {
         width - m_metrics.paddingH,
         bottomTop + bottomHeight
     };
+
+    // Store the computed minimum window height so CalendarWindow can query it
+    m_metrics.computedHeight = bottomTop + bottomHeight + Scale(10, dpi); // 10px bottom padding
 }
 
 int CalendarRenderer::HitTestCell(POINT pt) const {
@@ -175,16 +178,45 @@ bool CalendarRenderer::HitTestNext(POINT pt) const {
 }
 
 void CalendarRenderer::DrawFilledCircle(HDC hdc, int cx, int cy, int diameter, COLORREF color) {
+    // GDI supersampling antialiasing:
+    // Draw the circle at 3x size into an off-screen bitmap, then StretchBlt it back
+    // down with HALFTONE mode. Windows blends neighboring pixels during downscale,
+    // producing smooth edges — entirely pure GDI, no extra DLLs.
+    const int SCALE = 3;
+    int bigDiam = diameter * SCALE;
+
+    HDC bigDC = CreateCompatibleDC(hdc);
+    HBITMAP bigBmp = CreateCompatibleBitmap(hdc, bigDiam, bigDiam);
+    HGDIOBJ oldBigBmp = SelectObject(bigDC, bigBmp);
+
+    // Fill the oversized bitmap with the same background color we'll be blending into.
+    // We use black here as a transparent sentinel; the final blit uses SRCCOPY after
+    // compositing, so we fill with the destination area first by copying it in.
+    // Simpler approach: use the window background color. Since we don't have it here,
+    // we BitBlt the destination region into bigDC at 1:1 (stretched 3x) so the background
+    // is correct before drawing the ellipse.
+    // Actually — simpler and correct: fill bigDC with the destination pixels (StretchBlt from hdc).
     int r = diameter / 2;
+    StretchBlt(bigDC, 0, 0, bigDiam, bigDiam, hdc, cx - r, cy - r, diameter, diameter, SRCCOPY);
+
+    // Draw the circle at 3x size
     HBRUSH hBrush = CreateSolidBrush(color);
-    HGDIOBJ oldBrush = SelectObject(hdc, hBrush);
-    HGDIOBJ oldPen = SelectObject(hdc, GetStockObject(NULL_PEN));
-
-    Ellipse(hdc, cx - r, cy - r, cx - r + diameter, cy - r + diameter);
-
-    SelectObject(hdc, oldPen);
-    SelectObject(hdc, oldBrush);
+    HGDIOBJ oldBrush = SelectObject(bigDC, hBrush);
+    HGDIOBJ oldPen = SelectObject(bigDC, GetStockObject(NULL_PEN));
+    Ellipse(bigDC, 0, 0, bigDiam, bigDiam);
+    SelectObject(bigDC, oldPen);
+    SelectObject(bigDC, oldBrush);
     DeleteObject(hBrush);
+
+    // Downscale back to destination with HALFTONE for smooth blending
+    SetStretchBltMode(hdc, HALFTONE);
+    SetBrushOrgEx(hdc, 0, 0, nullptr);
+    StretchBlt(hdc, cx - r, cy - r, diameter, diameter, bigDC, 0, 0, bigDiam, bigDiam, SRCCOPY);
+    SetStretchBltMode(hdc, COLORONCOLOR); // restore default
+
+    SelectObject(bigDC, oldBigBmp);
+    DeleteObject(bigBmp);
+    DeleteDC(bigDC);
 }
 
 void CalendarRenderer::DrawChevron(HDC hdc, const RECT& rc, bool isLeft, COLORREF color, int dpi) {
@@ -240,14 +272,8 @@ void CalendarRenderer::Render(
     FillRect(memDC, &clientRect, hBrBg);
     DeleteObject(hBrBg);
 
-    // 3. Subtle 1px Window Border
-    HPEN hPenBorder = CreatePen(PS_SOLID, 1, theme.border);
-    HGDIOBJ oldPen = SelectObject(memDC, hPenBorder);
-    HGDIOBJ oldBrush = SelectObject(memDC, GetStockObject(NULL_BRUSH));
-    Rectangle(memDC, clientRect.left, clientRect.top, clientRect.right, clientRect.bottom);
-    SelectObject(memDC, oldBrush);
-    SelectObject(memDC, oldPen);
-    DeleteObject(hPenBorder);
+    // 3. No explicit border rectangle — DWM DWMWCP_ROUND handles window outline
+    //    Drawing a Rectangle() here would paint sharp corners over DWM's rounded ones.
 
     // 4. Header: Month and Year (e.g., "November 2026")
     std::wstring headerText = dateService.GetFormattedViewHeader();
@@ -328,7 +354,12 @@ void CalendarRenderer::Render(
         COLORREF textColor = theme.textNormal;
 
         if (cell.isToday) {
-            // Today's date always receives circular accent highlight
+            // Today's date always receives circular accent highlight.
+            // On hover: draw a slightly lighter outer ring to show interactivity.
+            if (isHovered) {
+                // Draw a slightly larger, semi-transparent ring around the accent circle
+                DrawFilledCircle(memDC, cx, cy, m_metrics.circleDiameter + Scale(4, m_metrics.dpi), theme.normalHoverBg);
+            }
             DrawFilledCircle(memDC, cx, cy, m_metrics.circleDiameter, theme.accentColor);
             textColor = theme.accentTextColor;
         } else if (cell.isSunday) {

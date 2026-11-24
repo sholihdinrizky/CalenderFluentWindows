@@ -10,7 +10,7 @@ namespace CalendarFlyout {
 struct LayoutMetrics {
     int dpi{96};
     int width{340};
-    int height{420};
+    int height{390};  // reduced from 420
 
     int paddingH{20};
     int paddingV{18};
@@ -26,6 +26,9 @@ struct LayoutMetrics {
     int cellWidth{0};
     int cellHeight{0};
     int circleDiameter{0};
+
+    // Computed total content height (populated by CalculateLayout)
+    int computedHeight{390};
 };
 
 class CalendarRenderer {

@@ -63,7 +63,7 @@ bool CalendarWindow::Create() {
 
     m_currentDpi = GetWindowDpi(nullptr);
     int width = MulDiv(340, m_currentDpi, 96);
-    int height = MulDiv(420, m_currentDpi, 96);
+    int height = MulDiv(390, m_currentDpi, 96); // reduced from 420
 
     // WS_EX_TOOLWINDOW prevents showing up in the taskbar and Alt+Tab
     // WS_EX_TOPMOST keeps it on top of other desktop windows when active
@@ -104,7 +104,7 @@ void CalendarWindow::UpdateDwmAttributes() {
 void CalendarWindow::RecalculateSizeAndDpi() {
     m_currentDpi = GetWindowDpi(m_hwnd);
     int width = MulDiv(340, m_currentDpi, 96);
-    int height = MulDiv(420, m_currentDpi, 96);
+    int height = MulDiv(390, m_currentDpi, 96); // matches Create() height
     SetWindowPos(m_hwnd, nullptr, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
     m_renderer.UpdateDpi(m_currentDpi, width, height);
 }
@@ -153,10 +153,17 @@ void CalendarWindow::Show(bool show) {
         m_dateService.RefreshCurrentDate();
         UpdateDwmAttributes();
         PositionNearTray();
-        ShowWindow(m_hwnd, SW_SHOW);
+        // AnimateWindow slides the popup up from the tray area.
+        // AW_SLIDE | AW_VER_NEGATIVE = slide upward (toward the top of the screen).
+        // Duration 150ms: short and snappy, feels native.
+        // No background thread or timer is needed — this is a single blocking OS call
+        // that uses zero CPU while the window is idle afterward.
+        AnimateWindow(m_hwnd, 150, AW_SLIDE | AW_VER_NEGATIVE | AW_ACTIVATE);
         UpdateWindow(m_hwnd);
     } else {
-        ShowWindow(m_hwnd, SW_HIDE);
+        // AW_SLIDE | AW_VER_POSITIVE | AW_HIDE = slide downward and hide.
+        // 100ms close is slightly faster than open for a snappier feel.
+        AnimateWindow(m_hwnd, 100, AW_SLIDE | AW_VER_POSITIVE | AW_HIDE);
     }
 }
 

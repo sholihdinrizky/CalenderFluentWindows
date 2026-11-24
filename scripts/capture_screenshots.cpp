@@ -53,6 +53,18 @@ int main() {
     calWin.CaptureToFile(L"build/light_mode_sunday_hover.bmp");
     std::cout << "Captured: light_mode_sunday_hover.bmp" << std::endl;
 
+    // 6. Dark Mode - Hover on TODAY (Nov 24 → cell index 23)
+    calWin.GetThemeManager().SetDarkModeOverride(true);
+    calWin.SetHoverCellForTest(23);
+    calWin.CaptureToFile(L"build/dark_mode_today_hover.bmp");
+    std::cout << "Captured: dark_mode_today_hover.bmp" << std::endl;
+
+    // 7. Light Mode - Normal Date Hover
+    calWin.GetThemeManager().SetDarkModeOverride(false);
+    calWin.SetHoverCellForTest(10);
+    calWin.CaptureToFile(L"build/light_mode_date_hover.bmp");
+    std::cout << "Captured: light_mode_date_hover.bmp" << std::endl;
+
     std::cout << "All visual captures created successfully!" << std::endl;
     return 0;
 }
