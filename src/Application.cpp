@@ -11,6 +11,9 @@ Application::Application(HINSTANCE hInstance)
 }
 
 Application::~Application() {
+    if (m_calendarWindow) {
+        m_calendarWindow->Show(false);
+    }
     if (m_trayIcon) {
         m_trayIcon->Remove();
     }
@@ -33,8 +36,7 @@ bool Application::Initialize() {
         return false;
     }
 
-    // Create a hidden top-level controller window (WS_POPUP without WS_VISIBLE)
-    // HWND_MESSAGE cannot receive Shell_NotifyIcon callbacks across processes, so a top-level window is used.
+    // Create a hidden top-level controller window
     m_hwndController = CreateWindowExW(
         0,
         Constants::CONTROLLER_CLASS_NAME,
@@ -51,6 +53,12 @@ bool Application::Initialize() {
         return false;
     }
 
+    // Initialize calendar popup window
+    m_calendarWindow = std::make_unique<CalendarWindow>(m_hInstance);
+    if (!m_calendarWindow->Create()) {
+        return false;
+    }
+
     // Initialize and show tray icon
     m_trayIcon = std::make_unique<TrayIcon>(m_hwndController, m_hInstance);
     m_trayIcon->Add();
@@ -60,8 +68,6 @@ bool Application::Initialize() {
 
 int Application::Run() {
     MSG msg;
-    // Pure event-driven message loop.
-    // When no messages are in queue, GetMessage blocks efficiently, resulting in 0% CPU.
     while (GetMessageW(&msg, nullptr, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessageW(&msg);
@@ -111,6 +117,9 @@ LRESULT Application::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
             ToggleCalendar();
             break;
         case IDM_TRAY_EXIT:
+            if (m_calendarWindow) {
+                m_calendarWindow->Show(false);
+            }
             if (m_trayIcon) {
                 m_trayIcon->Remove();
             }
@@ -120,6 +129,9 @@ LRESULT Application::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
         return 0;
 
     case WM_DESTROY:
+        if (m_calendarWindow) {
+            m_calendarWindow->Show(false);
+        }
         if (m_trayIcon) {
             m_trayIcon->Remove();
         }
@@ -131,7 +143,6 @@ LRESULT Application::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 }
 
 void Application::OnTrayNotification(WPARAM /*wParam*/, LPARAM lParam) {
-    // Handle tray icon interaction messages
     UINT event = LOWORD(lParam);
     switch (event) {
     case WM_LBUTTONUP:
@@ -151,13 +162,17 @@ void Application::OnTrayNotification(WPARAM /*wParam*/, LPARAM lParam) {
 }
 
 void Application::OnActivateInstance() {
-    // Called when a second instance tries to launch
-    ToggleCalendar();
+    // When a second instance is launched, activate/show the calendar popup
+    if (m_calendarWindow && !m_calendarWindow->IsVisible()) {
+        m_calendarWindow->Show(true);
+    }
 }
 
 void Application::ToggleCalendar() {
-    // In Phase 2, this verifies that activation triggers successfully.
-    // In Phase 3, this will show / hide the calendar popup window.
+    if (m_calendarWindow) {
+        bool visible = m_calendarWindow->IsVisible();
+        m_calendarWindow->Show(!visible);
+    }
 }
 
 } // namespace CalendarFlyout

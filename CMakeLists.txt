@@ -24,6 +24,10 @@ set(SOURCES
     src/Application.cpp
     src/TrayIcon.cpp
     src/SingleInstance.cpp
+    src/DateService.cpp
+    src/ThemeManager.cpp
+    src/CalendarRenderer.cpp
+    src/CalendarWindow.cpp
 )
 
 set(HEADERS
@@ -32,6 +36,10 @@ set(HEADERS
     include/SingleInstance.h
     include/Constants.h
     include/Resource.h
+    include/DateService.h
+    include/ThemeManager.h
+    include/CalendarRenderer.h
+    include/CalendarWindow.h
 )
 
 # Resources
