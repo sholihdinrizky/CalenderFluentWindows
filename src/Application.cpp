@@ -170,8 +170,17 @@ void Application::OnActivateInstance() {
 
 void Application::ToggleCalendar() {
     if (m_calendarWindow) {
-        bool visible = m_calendarWindow->IsVisible();
-        m_calendarWindow->Show(!visible);
+        if (m_calendarWindow->IsVisible()) {
+            m_calendarWindow->Show(false);
+        } else {
+            // Debounce: if the popup was just dismissed via focus loss (e.g. user clicked
+            // the tray icon while the popup was open), ignore this toggle so it stays closed.
+            ULONGLONG now = GetTickCount64();
+            if (now - m_calendarWindow->GetLastDismissTime() < 250) {
+                return;
+            }
+            m_calendarWindow->Show(true);
+        }
     }
 }
 

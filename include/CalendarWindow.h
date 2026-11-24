@@ -24,6 +24,7 @@ public:
     DateService& GetDateService() { return m_dateService; }
     ThemeManager& GetThemeManager() { return m_themeManager; }
     CalendarRenderer& GetRenderer() { return m_renderer; }
+    ULONGLONG GetLastDismissTime() const { return m_lastDismissTime; }
 
     // Testing and preview helpers for Phase 3
     void SetHoverCellForTest(int cellIndex);
@@ -47,6 +48,7 @@ private:
     bool m_hoveredPrev{false};
     bool m_hoveredNext{false};
     int m_currentDpi{96};
+    ULONGLONG m_lastDismissTime{0};
 };
 
 } // namespace CalendarFlyout

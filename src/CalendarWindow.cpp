@@ -162,6 +162,8 @@ void CalendarWindow::Show(bool show) {
         // 120ms: snappy and responsive, matching Windows 11 flyout feel.
         // No background thread or timer needed — zero idle CPU.
         AnimateWindow(m_hwnd, 120, AW_SLIDE | AW_VER_NEGATIVE | AW_ACTIVATE);
+        SetForegroundWindow(m_hwnd);
+        SetFocus(m_hwnd);
         UpdateWindow(m_hwnd);
     } else {
         if (!IsVisible()) return;
@@ -263,6 +265,22 @@ LRESULT CALLBACK CalendarWindow::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
 LRESULT CalendarWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
+    case WM_ACTIVATE:
+        if (LOWORD(wParam) == WA_INACTIVE) {
+            m_lastDismissTime = GetTickCount64();
+            Show(false);
+        } else {
+            SetFocus(hwnd);
+        }
+        return 0;
+
+    case WM_KEYDOWN:
+        if (wParam == VK_ESCAPE) {
+            Show(false);
+            return 0;
+        }
+        break;
+
     case WM_PAINT:
         OnPaint(hwnd);
         return 0;
