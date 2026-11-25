@@ -154,7 +154,7 @@ void CalendarWindow::Show(bool show) {
     if (show) {
         if (IsVisible()) return;
         m_themeManager.RefreshTheme();
-        m_dateService.RefreshCurrentDate();
+        m_dateService.ResetToToday();
         UpdateDwmAttributes();
         PositionNearTray();
         // AnimateWindow slides the popup up smoothly from the tray area.
@@ -167,6 +167,10 @@ void CalendarWindow::Show(bool show) {
         UpdateWindow(m_hwnd);
     } else {
         if (!IsVisible()) return;
+        m_hoveredCellIndex = -1;
+        m_hoveredPrev = false;
+        m_hoveredNext = false;
+        m_isMouseTracking = false;
         // AW_SLIDE | AW_VER_POSITIVE | AW_HIDE = slide downward and hide.
         // 100ms close: fast and clean dismissal.
         AnimateWindow(m_hwnd, 100, AW_SLIDE | AW_VER_POSITIVE | AW_HIDE);
@@ -280,6 +284,78 @@ LRESULT CalendarWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
             return 0;
         }
         break;
+
+    case WM_MOUSEMOVE: {
+        if (!m_isMouseTracking) {
+            TRACKMOUSEEVENT tme{};
+            tme.cbSize = sizeof(TRACKMOUSEEVENT);
+            tme.dwFlags = TME_LEAVE;
+            tme.hwndTrack = hwnd;
+            if (TrackMouseEvent(&tme)) {
+                m_isMouseTracking = true;
+            }
+        }
+
+        POINT pt = { static_cast<short>(LOWORD(lParam)), static_cast<short>(HIWORD(lParam)) };
+        int cellIndex = m_renderer.HitTestCell(pt);
+        bool prevHover = m_renderer.HitTestPrev(pt);
+        bool nextHover = m_renderer.HitTestNext(pt);
+
+        // Repaint ONLY when the hovered target actually changes
+        if (cellIndex != m_hoveredCellIndex || prevHover != m_hoveredPrev || nextHover != m_hoveredNext) {
+            m_hoveredCellIndex = cellIndex;
+            m_hoveredPrev = prevHover;
+            m_hoveredNext = nextHover;
+            InvalidateRect(hwnd, nullptr, FALSE);
+            UpdateWindow(hwnd);
+        }
+        return 0;
+    }
+
+    case WM_MOUSELEAVE: {
+        m_isMouseTracking = false;
+        if (m_hoveredCellIndex != -1 || m_hoveredPrev || m_hoveredNext) {
+            m_hoveredCellIndex = -1;
+            m_hoveredPrev = false;
+            m_hoveredNext = false;
+            InvalidateRect(hwnd, nullptr, FALSE);
+            UpdateWindow(hwnd);
+        }
+        return 0;
+    }
+
+    case WM_LBUTTONDOWN:
+    case WM_LBUTTONDBLCLK: {
+        POINT pt = { static_cast<short>(LOWORD(lParam)), static_cast<short>(HIWORD(lParam)) };
+        if (m_renderer.HitTestPrev(pt)) {
+            m_dateService.NavigatePreviousMonth();
+            m_hoveredCellIndex = m_renderer.HitTestCell(pt);
+            InvalidateRect(hwnd, nullptr, FALSE);
+            UpdateWindow(hwnd);
+            return 0;
+        }
+        if (m_renderer.HitTestNext(pt)) {
+            m_dateService.NavigateNextMonth();
+            m_hoveredCellIndex = m_renderer.HitTestCell(pt);
+            InvalidateRect(hwnd, nullptr, FALSE);
+            UpdateWindow(hwnd);
+            return 0;
+        }
+        return 0;
+    }
+
+    case WM_SETCURSOR: {
+        if (LOWORD(lParam) == HTCLIENT) {
+            POINT pt;
+            GetCursorPos(&pt);
+            ScreenToClient(hwnd, &pt);
+            if (m_renderer.HitTestPrev(pt) || m_renderer.HitTestNext(pt)) {
+                SetCursor(LoadCursorW(nullptr, MAKEINTRESOURCEW(32649))); // IDC_HAND
+                return TRUE;
+            }
+        }
+        break;
+    }
 
     case WM_PAINT:
         OnPaint(hwnd);

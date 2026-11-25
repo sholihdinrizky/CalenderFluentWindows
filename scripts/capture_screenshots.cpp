@@ -65,6 +65,24 @@ int main() {
     calWin.CaptureToFile(L"build/light_mode_date_hover.bmp");
     std::cout << "Captured: light_mode_date_hover.bmp" << std::endl;
 
+    // 8. Dark Mode - Chevron Next Hover
+    calWin.GetThemeManager().SetDarkModeOverride(true);
+    calWin.SetHoverCellForTest(-1);
+    calWin.SetHoverChevronsForTest(false, true);
+    calWin.CaptureToFile(L"build/dark_mode_chevron_hover.bmp");
+    std::cout << "Captured: dark_mode_chevron_hover.bmp" << std::endl;
+
+    // 9. Dark Mode - Navigated to December 2026
+    calWin.SetHoverChevronsForTest(false, false);
+    calWin.GetDateService().NavigateNextMonth(); // now December 2026
+    calWin.CaptureToFile(L"build/dark_mode_nav_december.bmp");
+    std::cout << "Captured: dark_mode_nav_december.bmp" << std::endl;
+
+    // 10. Dark Mode - Navigated Cross-Year to January 2027
+    calWin.GetDateService().NavigateNextMonth(); // now January 2027
+    calWin.CaptureToFile(L"build/dark_mode_nav_january2027.bmp");
+    std::cout << "Captured: dark_mode_nav_january2027.bmp" << std::endl;
+
     std::cout << "All visual captures created successfully!" << std::endl;
     return 0;
 }

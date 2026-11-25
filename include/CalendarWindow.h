@@ -26,8 +26,9 @@ public:
     CalendarRenderer& GetRenderer() { return m_renderer; }
     ULONGLONG GetLastDismissTime() const { return m_lastDismissTime; }
 
-    // Testing and preview helpers for Phase 3
+    // Testing and preview helpers for Phase 3 and 4
     void SetHoverCellForTest(int cellIndex);
+    void SetHoverChevronsForTest(bool prev, bool next) { m_hoveredPrev = prev; m_hoveredNext = next; Refresh(); }
     void CaptureToFile(const std::wstring& outPngOrBmpPath);
 
 private:
@@ -47,6 +48,7 @@ private:
     int m_hoveredCellIndex{-1};
     bool m_hoveredPrev{false};
     bool m_hoveredNext{false};
+    bool m_isMouseTracking{false};
     int m_currentDpi{96};
     ULONGLONG m_lastDismissTime{0};
 };
