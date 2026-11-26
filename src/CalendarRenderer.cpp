@@ -118,6 +118,17 @@ void CalendarRenderer::CalculateLayout(int width, int height) {
     int gridWidth = width - 2 * m_metrics.paddingH;
 
     m_metrics.cellWidth = gridWidth / 7;
+    // Distribute leftover pixels across columns for pixel-perfect alignment.
+    // This avoids a ragged right edge at some DPIs/window widths.
+    int remainder = gridWidth - (m_metrics.cellWidth * 7);
+    int x = m_metrics.paddingH;
+    for (int col = 0; col < 7; ++col) {
+        m_metrics.gridColX[col] = x;
+        int colW = m_metrics.cellWidth + (col < remainder ? 1 : 0);
+        x += colW;
+    }
+    m_metrics.gridColX[7] = x;
+
     // Base cell height
     m_metrics.cellHeight = Scale(32, dpi);
     int totalGridHeight = m_metrics.cellHeight * 6;
@@ -125,7 +136,7 @@ void CalendarRenderer::CalculateLayout(int width, int height) {
     m_metrics.gridRect = {
         m_metrics.paddingH,
         gridTop,
-        m_metrics.paddingH + m_metrics.cellWidth * 7,
+        m_metrics.gridColX[7],
         gridTop + totalGridHeight
     };
 
@@ -155,11 +166,21 @@ int CalendarRenderer::HitTestCell(POINT pt) const {
         return -1;
     }
 
-    int relX = pt.x - m_metrics.gridRect.left;
     int relY = pt.y - m_metrics.gridRect.top;
-
-    int col = relX / m_metrics.cellWidth;
     int row = relY / m_metrics.cellHeight;
+
+    // Use distributed column boundaries for accurate hit testing.
+    int col = -1;
+    for (int c = 0; c < 7; ++c) {
+        if (pt.x >= m_metrics.gridColX[c] && pt.x < m_metrics.gridColX[c + 1]) {
+            col = c;
+            break;
+        }
+    }
+    // Include exact right edge in the last column.
+    if (col < 0 && pt.x == m_metrics.gridColX[7]) {
+        col = 6;
+    }
 
     if (col >= 0 && col < 7 && row >= 0 && row < 6) {
         int index = row * 7 + col;
@@ -221,14 +242,32 @@ void CalendarRenderer::DrawFilledCircle(HDC hdc, int cx, int cy, int diameter, C
 }
 
 void CalendarRenderer::DrawChevron(HDC hdc, const RECT& rc, bool isLeft, COLORREF color, int dpi) {
-    int cx = rc.left + (rc.right - rc.left) / 2;
-    int cy = rc.top + (rc.bottom - rc.top) / 2;
-    int arm = Scale(4, dpi);
-    int span = Scale(5, dpi);
+    // Supersampled GDI rendering for smooth chevron edges, using the same
+    // approach as DrawFilledCircle: draw at 3x then HALFTONE downscale.
+    const int SCALE = 3;
+    const int w = rc.right - rc.left;
+    const int h = rc.bottom - rc.top;
+    if (w <= 0 || h <= 0) return;
 
-    int penWidth = std::max(1, Scale(2, dpi));
+    const int bigW = w * SCALE;
+    const int bigH = h * SCALE;
+
+    HDC bigDC = CreateCompatibleDC(hdc);
+    HBITMAP bigBmp = CreateCompatibleBitmap(hdc, bigW, bigH);
+    HGDIOBJ oldBigBmp = SelectObject(bigDC, bigBmp);
+
+    // Copy destination background so downscaling blends edges naturally.
+    StretchBlt(bigDC, 0, 0, bigW, bigH, hdc, rc.left, rc.top, w, h, SRCCOPY);
+
+    const int cx = bigW / 2;
+    const int cy = bigH / 2;
+    const int arm = Scale(4, dpi) * SCALE;
+    const int span = Scale(5, dpi) * SCALE;
+    const int penWidth = std::max(1, Scale(2, dpi)) * SCALE;
+
     HPEN hPen = CreatePen(PS_SOLID, penWidth, color);
-    HGDIOBJ oldPen = SelectObject(hdc, hPen);
+    HGDIOBJ oldPen = SelectObject(bigDC, hPen);
+    HGDIOBJ oldBrush = SelectObject(bigDC, GetStockObject(NULL_BRUSH));
 
     POINT pts[3];
     if (isLeft) {
@@ -241,10 +280,20 @@ void CalendarRenderer::DrawChevron(HDC hdc, const RECT& rc, bool isLeft, COLORRE
         pts[2] = {cx - arm, cy + span};
     }
 
-    Polyline(hdc, pts, 3);
+    Polyline(bigDC, pts, 3);
 
-    SelectObject(hdc, oldPen);
+    SelectObject(bigDC, oldBrush);
+    SelectObject(bigDC, oldPen);
     DeleteObject(hPen);
+
+    SetStretchBltMode(hdc, HALFTONE);
+    SetBrushOrgEx(hdc, 0, 0, nullptr);
+    StretchBlt(hdc, rc.left, rc.top, w, h, bigDC, 0, 0, bigW, bigH, SRCCOPY);
+    SetStretchBltMode(hdc, COLORONCOLOR);
+
+    SelectObject(bigDC, oldBigBmp);
+    DeleteObject(bigBmp);
+    DeleteDC(bigDC);
 }
 
 void CalendarRenderer::Render(
@@ -318,9 +367,9 @@ void CalendarRenderer::Render(
 
     for (int col = 0; col < 7; ++col) {
         RECT rcCol{
-            m_metrics.gridRect.left + col * m_metrics.cellWidth,
+            m_metrics.gridColX[col],
             m_metrics.weekdaysRect.top,
-            m_metrics.gridRect.left + (col + 1) * m_metrics.cellWidth,
+            m_metrics.gridColX[col + 1],
             m_metrics.weekdaysRect.bottom
         };
         DrawTextW(
@@ -342,9 +391,9 @@ void CalendarRenderer::Render(
         int row = i / 7;
 
         RECT cellRect{
-            m_metrics.gridRect.left + col * m_metrics.cellWidth,
+            m_metrics.gridColX[col],
             m_metrics.gridRect.top + row * m_metrics.cellHeight,
-            m_metrics.gridRect.left + (col + 1) * m_metrics.cellWidth,
+            m_metrics.gridColX[col + 1],
             m_metrics.gridRect.top + (row + 1) * m_metrics.cellHeight
         };
 

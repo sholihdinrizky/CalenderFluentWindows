@@ -23,9 +23,10 @@ struct LayoutMetrics {
     RECT gridRect{};
     RECT bottomDateRect{};
 
-    int cellWidth{0};
+    int cellWidth{0};      // base column width (for backward-compatible references)
     int cellHeight{0};
     int circleDiameter{0};
+    int gridColX[8]{};     // pixel x boundaries for 7 columns (index 8 = right edge)
 
     // Computed total content height (populated by CalculateLayout)
     int computedHeight{324};
