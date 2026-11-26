@@ -30,6 +30,7 @@ public:
     void SetHoverCellForTest(int cellIndex);
     void SetHoverChevronsForTest(bool prev, bool next) { m_hoveredPrev = prev; m_hoveredNext = next; Refresh(); }
     void CaptureToFile(const std::wstring& outPngOrBmpPath);
+    void ApplyThemeChange();
 
 private:
     static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);

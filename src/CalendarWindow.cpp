@@ -188,6 +188,12 @@ void CalendarWindow::Refresh() {
     }
 }
 
+void CalendarWindow::ApplyThemeChange() {
+    m_themeManager.RefreshTheme();
+    UpdateDwmAttributes();
+    Refresh();
+}
+
 void CalendarWindow::SetHoverCellForTest(int cellIndex) {
     m_hoveredCellIndex = cellIndex;
     Refresh();

@@ -14,13 +14,18 @@ public:
     bool Remove();
     void HandleTaskbarCreated();
     void ShowContextMenu(POINT cursorPt);
+    void UpdateTheme(bool taskbarDarkMode);
 
 private:
-    HICON LoadAppIcon();
+    HICON LoadTrayIconResource(int resourceId);
+    HICON CreateFallbackIcon(bool taskbarDarkMode);
+    HICON SelectIcon(bool taskbarDarkMode) const;
 
     HWND m_ownerHwnd{nullptr};
     HINSTANCE m_instance{nullptr};
-    HICON m_icon{nullptr};
+    HICON m_darkTaskbarIcon{nullptr};  // white glyph for dark taskbar
+    HICON m_lightTaskbarIcon{nullptr}; // dark glyph for light taskbar
+    bool m_taskbarDarkMode{true};
     bool m_isAdded{false};
     NOTIFYICONDATAW m_nid{};
 };

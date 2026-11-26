@@ -21,6 +21,7 @@ void ThemeManager::ClearOverride() {
 void ThemeManager::RefreshTheme() {
     bool dark = m_hasOverride ? m_overrideDark : DetectWindowsDarkMode();
     m_colors.isDarkMode = dark;
+    m_taskbarDarkMode = m_hasOverride ? m_overrideDark : DetectTaskbarDarkMode();
 
     COLORREF accent = DetectWindowsAccentColor();
     m_colors.accentColor = accent;
@@ -78,6 +79,32 @@ bool ThemeManager::DetectWindowsDarkMode() {
         RegCloseKey(hKey);
     }
     return true; // Default to dark mode on Windows 11
+}
+
+bool ThemeManager::DetectTaskbarDarkMode() {
+    // Windows 11 taskbar appearance is controlled by SystemUsesLightTheme.
+    // 0 = dark taskbar/system surfaces, 1 = light taskbar/system surfaces.
+    // We read this separately from AppsUseLightTheme because the app theme and
+    // taskbar theme can be configured independently in Windows settings.
+    HKEY hKey;
+    if (RegOpenKeyExW(
+            HKEY_CURRENT_USER,
+            L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+            0,
+            KEY_READ,
+            &hKey) == ERROR_SUCCESS) {
+        DWORD value = 0;
+        DWORD size = sizeof(value);
+        if (RegQueryValueExW(hKey, L"SystemUsesLightTheme", nullptr, nullptr, reinterpret_cast<LPBYTE>(&value), &size) == ERROR_SUCCESS) {
+            RegCloseKey(hKey);
+            return (value == 0);
+        }
+        RegCloseKey(hKey);
+    }
+
+    // Fallback: if SystemUsesLightTheme is unavailable, use the app theme as a
+    // best-effort approximation rather than guessing blindly.
+    return DetectWindowsDarkMode();
 }
 
 COLORREF ThemeManager::DetectWindowsAccentColor() {

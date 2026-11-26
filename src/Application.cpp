@@ -61,6 +61,7 @@ bool Application::Initialize() {
 
     // Initialize and show tray icon
     m_trayIcon = std::make_unique<TrayIcon>(m_hwndController, m_hInstance);
+    m_trayIcon->UpdateTheme(m_calendarWindow->GetThemeManager().IsTaskbarDarkMode());
     m_trayIcon->Add();
 
     return true;
@@ -97,6 +98,9 @@ LRESULT Application::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
     if (msg == m_taskbarCreatedMsg && m_taskbarCreatedMsg != 0) {
         if (m_trayIcon) {
             m_trayIcon->HandleTaskbarCreated();
+            if (m_calendarWindow) {
+                m_trayIcon->UpdateTheme(m_calendarWindow->GetThemeManager().IsTaskbarDarkMode());
+            }
         }
         return 0;
     }
@@ -107,6 +111,18 @@ LRESULT Application::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
     }
 
     switch (msg) {
+    case WM_SETTINGCHANGE:
+    case WM_THEMECHANGED:
+    case WM_SYSCOLORCHANGE:
+        if (m_calendarWindow) {
+            auto& theme = m_calendarWindow->GetThemeManager();
+            const bool wasTaskbarDark = theme.IsTaskbarDarkMode();
+            m_calendarWindow->ApplyThemeChange();
+            if (m_trayIcon && wasTaskbarDark != theme.IsTaskbarDarkMode()) {
+                m_trayIcon->UpdateTheme(theme.IsTaskbarDarkMode());
+            }
+        }
+        return 0;
     case Constants::WM_TRAY_CALLBACK:
         OnTrayNotification(wParam, lParam);
         return 0;

@@ -2,3 +2,5 @@
 #include "../include/Resource.h"
 
 IDI_APP_ICON ICON "../assets/app.ico"
+IDI_TRAY_DARK ICON "../assets/tray_dark.ico"
+IDI_TRAY_LIGHT ICON "../assets/tray_light.ico"

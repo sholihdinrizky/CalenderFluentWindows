@@ -34,6 +34,7 @@ public:
     void RefreshTheme();
     const ThemeColors& GetColors() const { return m_colors; }
     bool IsDarkMode() const { return m_colors.isDarkMode; }
+    bool IsTaskbarDarkMode() const { return m_taskbarDarkMode; }
 
     // Manual overrides for testing/screenshot verification
     void SetDarkModeOverride(bool isDark);
@@ -41,10 +42,12 @@ public:
 
 private:
     bool DetectWindowsDarkMode();
+    bool DetectTaskbarDarkMode();
     COLORREF DetectWindowsAccentColor();
     static COLORREF CalculateContrastingTextColor(COLORREF bg);
 
     ThemeColors m_colors;
+    bool m_taskbarDarkMode{true};
     bool m_hasOverride{false};
     bool m_overrideDark{true};
 };
