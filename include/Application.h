@@ -24,6 +24,8 @@ private:
 
     void OnTrayNotification(WPARAM wParam, LPARAM lParam);
     void OnActivateInstance();
+    void StartTrayHoverTimer();
+    void CancelTrayHoverTimer();
 
     HINSTANCE m_hInstance{nullptr};
     HWND m_hwndController{nullptr};
@@ -32,6 +34,7 @@ private:
 
     UINT m_taskbarCreatedMsg{0};
     UINT m_activateInstanceMsg{0};
+    bool m_trayHoverTimerActive{false};
 };
 
 } // namespace CalendarFlyout

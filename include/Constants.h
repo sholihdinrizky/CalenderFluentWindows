@@ -6,6 +6,10 @@ namespace CalendarFlyout::Constants {
     // Registered custom window message for tray icon callbacks
     inline constexpr UINT WM_TRAY_CALLBACK = WM_USER + 1;
 
+    // Timer used to open the calendar after an intentional tray-icon hover.
+    inline constexpr UINT_PTR TIMER_TRAY_HOVER_OPEN = 1;
+    inline constexpr UINT TRAY_HOVER_OPEN_DELAY_MS = 400;
+
     // Window class name for controller
     inline constexpr const wchar_t* CONTROLLER_CLASS_NAME = L"CalendarFlyout_ControllerWindow";
 

@@ -157,23 +157,24 @@ void CalendarWindow::Show(bool show) {
         m_dateService.ResetToToday();
         UpdateDwmAttributes();
         PositionNearTray();
-        // AnimateWindow slides the popup up smoothly from the tray area.
-        // AW_SLIDE | AW_VER_NEGATIVE = slide upward (toward the top of the screen).
-        // 120ms: snappy and responsive, matching Windows 11 flyout feel.
-        // No background thread or timer needed — zero idle CPU.
-        AnimateWindow(m_hwnd, 120, AW_SLIDE | AW_VER_NEGATIVE | AW_ACTIVATE);
+
+        // Paint the full calendar content before making the window visible.
+        // This avoids the "thin outline / blank popup" symptom: the user sees
+        // a fully rendered calendar immediately instead of an empty shell.
+        InvalidateRect(m_hwnd, nullptr, FALSE);
+        ShowWindow(m_hwnd, SW_SHOWNOACTIVATE);
+        UpdateWindow(m_hwnd); // Synchronously dispatch WM_PAINT now.
         SetForegroundWindow(m_hwnd);
         SetFocus(m_hwnd);
-        UpdateWindow(m_hwnd);
     } else {
         if (!IsVisible()) return;
         m_hoveredCellIndex = -1;
         m_hoveredPrev = false;
         m_hoveredNext = false;
         m_isMouseTracking = false;
-        // AW_SLIDE | AW_VER_POSITIVE | AW_HIDE = slide downward and hide.
-        // 100ms close: fast and clean dismissal.
-        AnimateWindow(m_hwnd, 100, AW_SLIDE | AW_VER_POSITIVE | AW_HIDE);
+        // Hide immediately. Responsiveness is more important than a close animation,
+        // and AnimateWindow can block the message pump on some popup/DWM configurations.
+        ShowWindow(m_hwnd, SW_HIDE);
     }
 }
 

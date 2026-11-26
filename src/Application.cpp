@@ -11,6 +11,9 @@ Application::Application(HINSTANCE hInstance)
 }
 
 Application::~Application() {
+    if (m_hwndController) {
+        KillTimer(m_hwndController, Constants::TIMER_TRAY_HOVER_OPEN);
+    }
     if (m_calendarWindow) {
         m_calendarWindow->Show(false);
     }
@@ -127,6 +130,18 @@ LRESULT Application::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
         OnTrayNotification(wParam, lParam);
         return 0;
 
+    case WM_TIMER:
+        if (wParam == Constants::TIMER_TRAY_HOVER_OPEN) {
+            CancelTrayHoverTimer();
+            // Open only if the popup is still hidden. This avoids re-opening
+            // immediately after a focus-loss dismissal or interrupting a visible popup.
+            if (m_calendarWindow && !m_calendarWindow->IsVisible()) {
+                m_calendarWindow->Show(true);
+            }
+            return 0;
+        }
+        break;
+
     case WM_COMMAND:
         switch (LOWORD(wParam)) {
         case IDM_TRAY_OPEN:
@@ -161,20 +176,59 @@ LRESULT Application::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 void Application::OnTrayNotification(WPARAM /*wParam*/, LPARAM lParam) {
     UINT event = LOWORD(lParam);
     switch (event) {
+    case NIN_SELECT:
+    case NIN_KEYSELECT:
     case WM_LBUTTONUP:
+        CancelTrayHoverTimer();
         ToggleCalendar();
         break;
 
     case WM_RBUTTONUP:
-    case WM_CONTEXTMENU: {
-        POINT pt;
-        GetCursorPos(&pt);
-        if (m_trayIcon) {
-            m_trayIcon->ShowContextMenu(pt);
+    case WM_CONTEXTMENU:
+        CancelTrayHoverTimer();
+        {
+            POINT pt;
+            GetCursorPos(&pt);
+            if (m_trayIcon) {
+                m_trayIcon->ShowContextMenu(pt);
+            }
         }
         break;
+
+    case NIN_POPUPOPEN:
+        // Received when the user hovers the tray icon (NOTIFYICON_VERSION_4).
+        // Use a short timer so passing over the icon does not open the popup.
+        if (m_calendarWindow) {
+            const ULONGLONG now = GetTickCount64();
+            if (now - m_calendarWindow->GetLastDismissTime() < 250) {
+                break;
+            }
+        }
+        StartTrayHoverTimer();
+        break;
+
+    case NIN_POPUPCLOSE:
+        // Received when hover leaves the tray icon or the popup is dismissed.
+        CancelTrayHoverTimer();
+        break;
     }
-    }
+}
+
+void Application::StartTrayHoverTimer() {
+    if (m_hwndController == nullptr) return;
+    if (m_calendarWindow && m_calendarWindow->IsVisible()) return;
+    m_trayHoverTimerActive = (SetTimer(
+        m_hwndController,
+        Constants::TIMER_TRAY_HOVER_OPEN,
+        Constants::TRAY_HOVER_OPEN_DELAY_MS,
+        nullptr
+    ) != 0);
+}
+
+void Application::CancelTrayHoverTimer() {
+    if (!m_trayHoverTimerActive || m_hwndController == nullptr) return;
+    KillTimer(m_hwndController, Constants::TIMER_TRAY_HOVER_OPEN);
+    m_trayHoverTimerActive = false;
 }
 
 void Application::OnActivateInstance() {
