@@ -1,4 +1,5 @@
 #include "CalendarWindow.h"
+#include "Constants.h"
 #include <dwmapi.h>
 #include <fstream>
 #include <vector>
@@ -150,9 +151,17 @@ void CalendarWindow::PositionNearTray(POINT trayPt) {
     SetWindowPos(m_hwnd, HWND_TOPMOST, posX, posY, winW, winH, SWP_NOACTIVATE);
 }
 
-void CalendarWindow::Show(bool show) {
+void CalendarWindow::Show(bool show, PopupOpenSource source) {
     if (show) {
-        if (IsVisible()) return;
+        if (IsVisible()) {
+            // If already visible, only upgrade hover-open to click-open.
+            if (source == PopupOpenSource::Click) {
+                m_openSource = PopupOpenSource::Click;
+            }
+            return;
+        }
+        m_openSource = source;
+        m_isPointerInside = false;
         m_themeManager.RefreshTheme();
         m_dateService.ResetToToday();
         UpdateDwmAttributes();
@@ -172,6 +181,8 @@ void CalendarWindow::Show(bool show) {
         m_hoveredPrev = false;
         m_hoveredNext = false;
         m_isMouseTracking = false;
+        m_isPointerInside = false;
+        m_openSource = PopupOpenSource::None;
         // Hide immediately. Responsiveness is more important than a close animation,
         // and AnimateWindow can block the message pump on some popup/DWM configurations.
         ShowWindow(m_hwnd, SW_HIDE);
@@ -293,6 +304,7 @@ LRESULT CalendarWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
         break;
 
     case WM_MOUSEMOVE: {
+        m_isPointerInside = true;
         if (!m_isMouseTracking) {
             TRACKMOUSEEVENT tme{};
             tme.cbSize = sizeof(TRACKMOUSEEVENT);
@@ -321,6 +333,7 @@ LRESULT CalendarWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
 
     case WM_MOUSELEAVE: {
         m_isMouseTracking = false;
+        m_isPointerInside = false;
         if (m_hoveredCellIndex != -1 || m_hoveredPrev || m_hoveredNext) {
             m_hoveredCellIndex = -1;
             m_hoveredPrev = false;
@@ -328,11 +341,21 @@ LRESULT CalendarWindow::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
             InvalidateRect(hwnd, nullptr, FALSE);
             UpdateWindow(hwnd);
         }
+        // Notify the controller so hover-opened popups can dismiss when the
+        // pointer leaves both the popup and the tray icon.
+        if (m_controllerHwnd) {
+            PostMessageW(m_controllerHwnd, Constants::WM_POPUP_POINTER_LEFT, 0, 0);
+        }
         return 0;
     }
 
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK: {
+        // Clicking inside a hover-opened popup should make it behave like a
+        // click-opened popup: it stays open until explicit dismissal.
+        if (m_openSource == PopupOpenSource::Hover) {
+            m_openSource = PopupOpenSource::Click;
+        }
         POINT pt = { static_cast<short>(LOWORD(lParam)), static_cast<short>(HIWORD(lParam)) };
         if (m_renderer.HitTestPrev(pt)) {
             m_dateService.NavigatePreviousMonth();

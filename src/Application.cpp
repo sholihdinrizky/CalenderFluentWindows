@@ -13,6 +13,7 @@ Application::Application(HINSTANCE hInstance)
 Application::~Application() {
     if (m_hwndController) {
         KillTimer(m_hwndController, Constants::TIMER_TRAY_HOVER_OPEN);
+        KillTimer(m_hwndController, Constants::TIMER_HOVER_DISMISS);
     }
     if (m_calendarWindow) {
         m_calendarWindow->Show(false);
@@ -61,6 +62,7 @@ bool Application::Initialize() {
     if (!m_calendarWindow->Create()) {
         return false;
     }
+    m_calendarWindow->SetControllerHwnd(m_hwndController);
 
     // Initialize and show tray icon
     m_trayIcon = std::make_unique<TrayIcon>(m_hwndController, m_hInstance);
@@ -136,11 +138,33 @@ LRESULT Application::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
             // Open only if the popup is still hidden. This avoids re-opening
             // immediately after a focus-loss dismissal or interrupting a visible popup.
             if (m_calendarWindow && !m_calendarWindow->IsVisible()) {
-                m_calendarWindow->Show(true);
+                m_calendarWindow->Show(true, PopupOpenSource::Hover);
+                UpdateHoverDismissState();
+            }
+            return 0;
+        }
+        if (wParam == Constants::TIMER_HOVER_DISMISS) {
+            CancelHoverDismissTimer();
+            // Grace period elapsed: if pointer is still outside both tray icon and
+            // hover-opened popup, close it.
+            if (m_calendarWindow && m_calendarWindow->IsVisible() &&
+                m_calendarWindow->GetOpenSource() == PopupOpenSource::Hover) {
+                POINT pt{};
+                GetCursorPos(&pt);
+                HWND hwndUnderCursor = WindowFromPoint(pt);
+                const bool inPopup = (hwndUnderCursor == m_calendarWindow->GetHwnd()) ||
+                                     (hwndUnderCursor != nullptr && IsChild(m_calendarWindow->GetHwnd(), hwndUnderCursor));
+                if (!m_isPointerOverTrayIcon && !inPopup) {
+                    m_calendarWindow->Show(false);
+                }
             }
             return 0;
         }
         break;
+
+    case Constants::WM_POPUP_POINTER_LEFT:
+        UpdateHoverDismissState();
+        return 0;
 
     case WM_COMMAND:
         switch (LOWORD(wParam)) {
@@ -179,13 +203,17 @@ void Application::OnTrayNotification(WPARAM /*wParam*/, LPARAM lParam) {
     case NIN_SELECT:
     case NIN_KEYSELECT:
     case WM_LBUTTONUP:
+        m_isPointerOverTrayIcon = true;
         CancelTrayHoverTimer();
+        CancelHoverDismissTimer();
         ToggleCalendar();
         break;
 
     case WM_RBUTTONUP:
     case WM_CONTEXTMENU:
+        m_isPointerOverTrayIcon = true;
         CancelTrayHoverTimer();
+        CancelHoverDismissTimer();
         {
             POINT pt;
             GetCursorPos(&pt);
@@ -198,6 +226,12 @@ void Application::OnTrayNotification(WPARAM /*wParam*/, LPARAM lParam) {
     case NIN_POPUPOPEN:
         // Received when the user hovers the tray icon (NOTIFYICON_VERSION_4).
         // Use a short timer so passing over the icon does not open the popup.
+        m_isPointerOverTrayIcon = true;
+        CancelHoverDismissTimer();
+        if (m_calendarWindow && m_calendarWindow->IsVisible()) {
+            // Already visible (click-opened or hover-opened); keep as-is.
+            break;
+        }
         if (m_calendarWindow) {
             const ULONGLONG now = GetTickCount64();
             if (now - m_calendarWindow->GetLastDismissTime() < 250) {
@@ -209,7 +243,9 @@ void Application::OnTrayNotification(WPARAM /*wParam*/, LPARAM lParam) {
 
     case NIN_POPUPCLOSE:
         // Received when hover leaves the tray icon or the popup is dismissed.
+        m_isPointerOverTrayIcon = false;
         CancelTrayHoverTimer();
+        UpdateHoverDismissState();
         break;
     }
 }
@@ -231,16 +267,67 @@ void Application::CancelTrayHoverTimer() {
     m_trayHoverTimerActive = false;
 }
 
+void Application::StartHoverDismissTimer() {
+    if (m_hoverDismissTimerActive || m_hwndController == nullptr) return;
+    m_hoverDismissTimerActive = (SetTimer(
+        m_hwndController,
+        Constants::TIMER_HOVER_DISMISS,
+        Constants::HOVER_DISMISS_DELAY_MS,
+        nullptr
+    ) != 0);
+}
+
+void Application::CancelHoverDismissTimer() {
+    if (!m_hoverDismissTimerActive || m_hwndController == nullptr) return;
+    KillTimer(m_hwndController, Constants::TIMER_HOVER_DISMISS);
+    m_hoverDismissTimerActive = false;
+}
+
+void Application::UpdateHoverDismissState() {
+    if (!m_calendarWindow || !m_calendarWindow->IsVisible()) {
+        CancelHoverDismissTimer();
+        return;
+    }
+
+    // Only hover-opened calendars auto-dismiss when pointer leaves both areas.
+    if (m_calendarWindow->GetOpenSource() != PopupOpenSource::Hover) {
+        CancelHoverDismissTimer();
+        return;
+    }
+
+    POINT pt{};
+    GetCursorPos(&pt);
+    HWND hwndUnderCursor = WindowFromPoint(pt);
+    const bool inPopup = (hwndUnderCursor == m_calendarWindow->GetHwnd()) ||
+                         (hwndUnderCursor != nullptr && IsChild(m_calendarWindow->GetHwnd(), hwndUnderCursor));
+
+    // Keep open while pointer is over tray icon or popup.
+    if (m_isPointerOverTrayIcon || inPopup) {
+        CancelHoverDismissTimer();
+        return;
+    }
+
+    // Pointer left both areas: start grace timer. Actual close happens in
+    // WM_TIMER after the grace period, preventing tray->popup transition flicker.
+    StartHoverDismissTimer();
+    if (!m_hoverDismissTimerActive) {
+        // Fail-safe if timer cannot be created.
+        m_calendarWindow->Show(false);
+    }
+}
+
 void Application::OnActivateInstance() {
     // When a second instance is launched, activate/show the calendar popup
     if (m_calendarWindow && !m_calendarWindow->IsVisible()) {
-        m_calendarWindow->Show(true);
+        CancelHoverDismissTimer();
+        m_calendarWindow->Show(true, PopupOpenSource::Click);
     }
 }
 
 void Application::ToggleCalendar() {
     if (m_calendarWindow) {
         if (m_calendarWindow->IsVisible()) {
+            CancelHoverDismissTimer();
             m_calendarWindow->Show(false);
         } else {
             // Debounce: if the popup was just dismissed via focus loss (e.g. user clicked
@@ -249,7 +336,8 @@ void Application::ToggleCalendar() {
             if (now - m_calendarWindow->GetLastDismissTime() < 250) {
                 return;
             }
-            m_calendarWindow->Show(true);
+            CancelHoverDismissTimer();
+            m_calendarWindow->Show(true, PopupOpenSource::Click);
         }
     }
 }

@@ -26,6 +26,9 @@ private:
     void OnActivateInstance();
     void StartTrayHoverTimer();
     void CancelTrayHoverTimer();
+    void StartHoverDismissTimer();
+    void CancelHoverDismissTimer();
+    void UpdateHoverDismissState();
 
     HINSTANCE m_hInstance{nullptr};
     HWND m_hwndController{nullptr};
@@ -35,6 +38,8 @@ private:
     UINT m_taskbarCreatedMsg{0};
     UINT m_activateInstanceMsg{0};
     bool m_trayHoverTimerActive{false};
+    bool m_hoverDismissTimerActive{false};
+    bool m_isPointerOverTrayIcon{false};
 };
 
 } // namespace CalendarFlyout

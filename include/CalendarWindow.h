@@ -8,15 +8,22 @@
 
 namespace CalendarFlyout {
 
+enum class PopupOpenSource {
+    None,
+    Hover,
+    Click
+};
+
 class CalendarWindow {
 public:
     CalendarWindow(HINSTANCE hInstance);
     ~CalendarWindow();
 
     bool Create();
-    void Show(bool show);
+    void Show(bool show, PopupOpenSource source = PopupOpenSource::Click);
     bool IsVisible() const;
     HWND GetHwnd() const { return m_hwnd; }
+    void SetControllerHwnd(HWND hwnd) { m_controllerHwnd = hwnd; }
 
     void PositionNearTray(POINT trayPt = {0, 0});
     void Refresh();
@@ -25,6 +32,8 @@ public:
     ThemeManager& GetThemeManager() { return m_themeManager; }
     CalendarRenderer& GetRenderer() { return m_renderer; }
     ULONGLONG GetLastDismissTime() const { return m_lastDismissTime; }
+    PopupOpenSource GetOpenSource() const { return m_openSource; }
+    bool IsPointerInside() const { return m_isPointerInside; }
 
     // Testing and preview helpers for Phase 3 and 4
     void SetHoverCellForTest(int cellIndex);
@@ -42,6 +51,7 @@ private:
 
     HINSTANCE m_hInstance{nullptr};
     HWND m_hwnd{nullptr};
+    HWND m_controllerHwnd{nullptr};
     DateService m_dateService;
     ThemeManager m_themeManager;
     CalendarRenderer m_renderer;
@@ -50,8 +60,10 @@ private:
     bool m_hoveredPrev{false};
     bool m_hoveredNext{false};
     bool m_isMouseTracking{false};
+    bool m_isPointerInside{false};
     int m_currentDpi{96};
     ULONGLONG m_lastDismissTime{0};
+    PopupOpenSource m_openSource{PopupOpenSource::None};
 };
 
 } // namespace CalendarFlyout
