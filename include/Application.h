@@ -18,9 +18,16 @@ public:
     CalendarWindow* GetCalendarWindow() { return m_calendarWindow.get(); }
     void ToggleCalendar();
 
+    bool IsShowOnHoverEnabled() const { return m_showOnHover; }
+    void SetShowOnHoverEnabled(bool enabled);
+    bool IsRunAtStartupEnabled() const;
+    void SetRunAtStartupEnabled(bool enabled);
+
 private:
     static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     LRESULT HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+    void InitializeSettings();
 
     void OnTrayNotification(WPARAM wParam, LPARAM lParam);
     void OnActivateInstance();
@@ -40,6 +47,8 @@ private:
     bool m_trayHoverTimerActive{false};
     bool m_hoverDismissTimerActive{false};
     bool m_isPointerOverTrayIcon{false};
+    bool m_showOnHover{false};
+    ULONGLONG m_lastClickTime{0};
 };
 
 } // namespace CalendarFlyout

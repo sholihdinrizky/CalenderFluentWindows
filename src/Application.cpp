@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "Constants.h"
 #include "Resource.h"
+#include <string>
 
 namespace CalendarFlyout {
 
@@ -68,6 +69,8 @@ bool Application::Initialize() {
     m_trayIcon = std::make_unique<TrayIcon>(m_hwndController, m_hInstance);
     m_trayIcon->UpdateTheme(m_calendarWindow->GetThemeManager().IsTaskbarDarkMode());
     m_trayIcon->Add();
+
+    InitializeSettings();
 
     return true;
 }
@@ -169,7 +172,16 @@ LRESULT Application::HandleMessage(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
     case WM_COMMAND:
         switch (LOWORD(wParam)) {
         case IDM_TRAY_OPEN:
-            ToggleCalendar();
+            if (m_calendarWindow) {
+                CancelHoverDismissTimer();
+                m_calendarWindow->Show(true, PopupOpenSource::Click);
+            }
+            break;
+        case IDM_TRAY_HOVER:
+            SetShowOnHoverEnabled(!m_showOnHover);
+            break;
+        case IDM_TRAY_STARTUP:
+            SetRunAtStartupEnabled(!IsRunAtStartupEnabled());
             break;
         case IDM_TRAY_EXIT:
             if (m_calendarWindow) {
@@ -214,11 +226,14 @@ void Application::OnTrayNotification(WPARAM /*wParam*/, LPARAM lParam) {
         m_isPointerOverTrayIcon = true;
         CancelTrayHoverTimer();
         CancelHoverDismissTimer();
+        if (m_calendarWindow && m_calendarWindow->IsVisible()) {
+            m_calendarWindow->Show(false);
+        }
         {
             POINT pt;
             GetCursorPos(&pt);
             if (m_trayIcon) {
-                m_trayIcon->ShowContextMenu(pt);
+                m_trayIcon->ShowContextMenu(pt, m_showOnHover, IsRunAtStartupEnabled());
             }
         }
         break;
@@ -228,6 +243,9 @@ void Application::OnTrayNotification(WPARAM /*wParam*/, LPARAM lParam) {
         // Use a short timer so passing over the icon does not open the popup.
         m_isPointerOverTrayIcon = true;
         CancelHoverDismissTimer();
+        if (!m_showOnHover) {
+            break;
+        }
         if (m_calendarWindow && m_calendarWindow->IsVisible()) {
             // Already visible (click-opened or hover-opened); keep as-is.
             break;
@@ -325,20 +343,136 @@ void Application::OnActivateInstance() {
 }
 
 void Application::ToggleCalendar() {
-    if (m_calendarWindow) {
-        if (m_calendarWindow->IsVisible()) {
-            CancelHoverDismissTimer();
-            m_calendarWindow->Show(false);
-        } else {
-            // Debounce: if the popup was just dismissed via focus loss (e.g. user clicked
-            // the tray icon while the popup was open), ignore this toggle so it stays closed.
-            ULONGLONG now = GetTickCount64();
-            if (now - m_calendarWindow->GetLastDismissTime() < 250) {
-                return;
-            }
-            CancelHoverDismissTimer();
-            m_calendarWindow->Show(true, PopupOpenSource::Click);
+    if (!m_calendarWindow) return;
+
+    ULONGLONG now = GetTickCount64();
+    // Debounce duplicate click notifications (e.g. WM_LBUTTONUP + NIN_SELECT from one physical click)
+    if (now - m_lastClickTime < 250) {
+        return;
+    }
+    m_lastClickTime = now;
+
+    if (m_calendarWindow->IsVisible()) {
+        CancelHoverDismissTimer();
+        m_calendarWindow->Show(false);
+    } else {
+        // Debounce: if the popup was just dismissed via focus loss (e.g. user clicked
+        // the tray icon while the popup was open), ignore this toggle so it stays closed.
+        if (now - m_calendarWindow->GetLastDismissTime() < 250) {
+            return;
         }
+        CancelHoverDismissTimer();
+        m_calendarWindow->Show(true, PopupOpenSource::Click);
+    }
+}
+
+void Application::InitializeSettings() {
+    HKEY hKey = nullptr;
+    DWORD disposition = 0;
+    LSTATUS status = RegCreateKeyExW(
+        HKEY_CURRENT_USER,
+        L"Software\\CalendarFlyout",
+        0, nullptr,
+        REG_OPTION_NON_VOLATILE,
+        KEY_QUERY_VALUE | KEY_SET_VALUE,
+        nullptr, &hKey, &disposition
+    );
+
+    if (status == ERROR_SUCCESS && hKey != nullptr) {
+        DWORD firstRun = 0;
+        DWORD size = sizeof(DWORD);
+        DWORD type = REG_DWORD;
+        LSTATUS queryStatus = RegQueryValueExW(hKey, L"FirstRun", nullptr, &type, reinterpret_cast<LPBYTE>(&firstRun), &size);
+
+        if (queryStatus != ERROR_SUCCESS || firstRun == 0) {
+            // First launch defaults: ShowOnHover OFF, RunAtStartup ON
+            m_showOnHover = false;
+            DWORD val = 0;
+            RegSetValueExW(hKey, L"ShowOnHover", 0, REG_DWORD, reinterpret_cast<const BYTE*>(&val), sizeof(DWORD));
+            firstRun = 1;
+            RegSetValueExW(hKey, L"FirstRun", 0, REG_DWORD, reinterpret_cast<const BYTE*>(&firstRun), sizeof(DWORD));
+
+            SetRunAtStartupEnabled(true);
+        } else {
+            DWORD showHoverVal = 1;
+            size = sizeof(DWORD);
+            if (RegQueryValueExW(hKey, L"ShowOnHover", nullptr, &type, reinterpret_cast<LPBYTE>(&showHoverVal), &size) == ERROR_SUCCESS) {
+                m_showOnHover = (showHoverVal != 0);
+            } else {
+                m_showOnHover = false;
+            }
+        }
+
+        // One-time migration: builds before settings version 2 defaulted ShowOnHover ON.
+        // Switch that old default OFF once, while preserving any later user changes.
+        DWORD settingsVersion = 0;
+        size = sizeof(DWORD);
+        if (RegQueryValueExW(hKey, L"SettingsVersion", nullptr, &type,
+                             reinterpret_cast<LPBYTE>(&settingsVersion), &size) != ERROR_SUCCESS || settingsVersion < 2) {
+            m_showOnHover = false;
+            DWORD hoverDisabled = 0;
+            RegSetValueExW(hKey, L"ShowOnHover", 0, REG_DWORD,
+                           reinterpret_cast<const BYTE*>(&hoverDisabled), sizeof(DWORD));
+            settingsVersion = 2;
+            RegSetValueExW(hKey, L"SettingsVersion", 0, REG_DWORD,
+                           reinterpret_cast<const BYTE*>(&settingsVersion), sizeof(DWORD));
+        }
+
+        RegCloseKey(hKey);
+    } else {
+        m_showOnHover = false;
+    }
+}
+
+void Application::SetShowOnHoverEnabled(bool enabled) {
+    m_showOnHover = enabled;
+    if (!m_showOnHover) {
+        CancelTrayHoverTimer();
+        CancelHoverDismissTimer();
+    }
+    HKEY hKey = nullptr;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\CalendarFlyout", 0, nullptr,
+                        REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, nullptr, &hKey, nullptr) == ERROR_SUCCESS) {
+        DWORD val = enabled ? 1 : 0;
+        RegSetValueExW(hKey, L"ShowOnHover", 0, REG_DWORD, reinterpret_cast<const BYTE*>(&val), sizeof(DWORD));
+        RegCloseKey(hKey);
+    }
+}
+
+bool Application::IsRunAtStartupEnabled() const {
+    HKEY hKey = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_QUERY_VALUE, &hKey) == ERROR_SUCCESS) {
+        wchar_t pathBuf[MAX_PATH];
+        DWORD size = sizeof(pathBuf);
+        DWORD type = REG_SZ;
+        LSTATUS status = RegQueryValueExW(hKey, L"CalendarFlyout", nullptr, &type, reinterpret_cast<LPBYTE>(pathBuf), &size);
+        RegCloseKey(hKey);
+        return (status == ERROR_SUCCESS);
+    }
+    return false;
+}
+
+void Application::SetRunAtStartupEnabled(bool enabled) {
+    HKEY hKey = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &hKey) == ERROR_SUCCESS) {
+        if (enabled) {
+            wchar_t exePath[MAX_PATH];
+            DWORD len = GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+            if (len > 0 && len < MAX_PATH) {
+                std::wstring formatted = L"\"" + std::wstring(exePath) + L"\"";
+                RegSetValueExW(
+                    hKey,
+                    L"CalendarFlyout",
+                    0,
+                    REG_SZ,
+                    reinterpret_cast<const BYTE*>(formatted.c_str()),
+                    static_cast<DWORD>((formatted.length() + 1) * sizeof(wchar_t))
+                );
+            }
+        } else {
+            RegDeleteValueW(hKey, L"CalendarFlyout");
+        }
+        RegCloseKey(hKey);
     }
 }
 

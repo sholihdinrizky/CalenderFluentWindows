@@ -242,8 +242,10 @@ void CalendarRenderer::DrawFilledCircle(HDC hdc, int cx, int cy, int diameter, C
 }
 
 void CalendarRenderer::DrawChevron(HDC hdc, const RECT& rc, bool isLeft, COLORREF color, int dpi) {
-    // Supersampled GDI rendering for smooth chevron edges, using the same
-    // approach as DrawFilledCircle: draw at 3x then HALFTONE downscale.
+    // Supersampled GDI rendering for smooth chevron edges.
+    // Draw as a filled polygon (solid triangle) instead of stroked lines:
+    // this guarantees no gaps at the vertex join and no missing pixels
+    // on diagonal segments after HALFTONE downsampling.
     const int SCALE = 3;
     const int w = rc.right - rc.left;
     const int h = rc.bottom - rc.top;
@@ -263,33 +265,35 @@ void CalendarRenderer::DrawChevron(HDC hdc, const RECT& rc, bool isLeft, COLORRE
     const int cy = bigH / 2;
     const int arm = Scale(4, dpi) * SCALE;
     const int span = Scale(5, dpi) * SCALE;
-    const int penWidth = std::max(1, Scale(2, dpi)) * SCALE;
 
-    HPEN hPen = CreatePen(PS_SOLID, penWidth, color);
-    HGDIOBJ oldPen = SelectObject(bigDC, hPen);
-    HGDIOBJ oldBrush = SelectObject(bigDC, GetStockObject(NULL_BRUSH));
+    HBRUSH hBrush = CreateSolidBrush(color);
+    HGDIOBJ oldBrush = SelectObject(bigDC, hBrush);
+    HGDIOBJ oldPen = SelectObject(bigDC, GetStockObject(NULL_PEN));
 
     POINT pts[3];
     if (isLeft) {
-        pts[0] = {cx + arm, cy - span};
-        pts[1] = {cx - arm, cy};
-        pts[2] = {cx + arm, cy + span};
+        // Points form a solid triangle pointing left: <
+        pts[0] = {cx + arm, cy - span};  // top point
+        pts[1] = {cx - arm, cy};          // vertex (leftmost)
+        pts[2] = {cx + arm, cy + span};   // bottom point
     } else {
-        pts[0] = {cx - arm, cy - span};
-        pts[1] = {cx + arm, cy};
-        pts[2] = {cx - arm, cy + span};
+        // Points form a solid triangle pointing right: >
+        pts[0] = {cx - arm, cy - span};   // top point
+        pts[1] = {cx + arm, cy};          // vertex (rightmost)
+        pts[2] = {cx - arm, cy + span};   // bottom point
     }
 
-    Polyline(bigDC, pts, 3);
+    Polygon(bigDC, pts, 3);
 
-    SelectObject(bigDC, oldBrush);
     SelectObject(bigDC, oldPen);
-    DeleteObject(hPen);
+    SelectObject(bigDC, oldBrush);
+    DeleteObject(hBrush);
 
+    // Downscale back to destination with HALFTONE for smooth blending
     SetStretchBltMode(hdc, HALFTONE);
     SetBrushOrgEx(hdc, 0, 0, nullptr);
     StretchBlt(hdc, rc.left, rc.top, w, h, bigDC, 0, 0, bigW, bigH, SRCCOPY);
-    SetStretchBltMode(hdc, COLORONCOLOR);
+    SetStretchBltMode(hdc, COLORONCOLOR); // restore default
 
     SelectObject(bigDC, oldBigBmp);
     DeleteObject(bigBmp);

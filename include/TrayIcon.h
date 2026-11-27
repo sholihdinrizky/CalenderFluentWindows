@@ -13,7 +13,7 @@ public:
     bool Add();
     bool Remove();
     void HandleTaskbarCreated();
-    void ShowContextMenu(POINT cursorPt);
+    void ShowContextMenu(POINT cursorPt, bool showOnHover, bool runAtStartup);
     void UpdateTheme(bool taskbarDarkMode);
 
 private:

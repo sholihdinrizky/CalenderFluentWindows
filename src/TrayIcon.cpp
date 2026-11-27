@@ -35,14 +35,18 @@ TrayIcon::~TrayIcon() {
 }
 
 HICON TrayIcon::LoadTrayIconResource(int resourceId) {
-    // Load the icon at the small-icon metric used by the tray/notification area.
-    // This keeps it crisp and avoids Windows scaling the wrong image.
+    // The notification area in the supplied Windows 11 configuration renders
+    // tray glyphs at 24x24. Request that exact ICO frame so Explorer does not
+    // upscale a 16x16 image and soften its edges. The ICO still contains
+    // dedicated 16/20/24/32/48 px frames for other consumers.
+    constexpr int kTrayIconWidth = 24;
+    constexpr int kTrayIconHeight = 24;
     return static_cast<HICON>(LoadImageW(
         m_instance,
         MAKEINTRESOURCEW(resourceId),
         IMAGE_ICON,
-        GetSystemMetrics(SM_CXSMICON),
-        GetSystemMetrics(SM_CYSMICON),
+        kTrayIconWidth,
+        kTrayIconHeight,
         LR_DEFAULTCOLOR
     ));
 }
@@ -179,11 +183,13 @@ void TrayIcon::UpdateTheme(bool taskbarDarkMode) {
     }
 }
 
-void TrayIcon::ShowContextMenu(POINT cursorPt) {
+void TrayIcon::ShowContextMenu(POINT cursorPt, bool showOnHover, bool runAtStartup) {
     HMENU hMenu = CreatePopupMenu();
     if (hMenu == nullptr) return;
 
     AppendMenuW(hMenu, MF_STRING, IDM_TRAY_OPEN, L"Open Calendar");
+    AppendMenuW(hMenu, MF_STRING | (showOnHover ? MF_CHECKED : MF_UNCHECKED), IDM_TRAY_HOVER, L"Show on hover");
+    AppendMenuW(hMenu, MF_STRING | (runAtStartup ? MF_CHECKED : MF_UNCHECKED), IDM_TRAY_STARTUP, L"Run at startup");
     AppendMenuW(hMenu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(hMenu, MF_STRING, IDM_TRAY_EXIT, L"Exit");
 
@@ -199,6 +205,8 @@ void TrayIcon::ShowContextMenu(POINT cursorPt) {
         m_ownerHwnd,
         nullptr
     );
+
+    PostMessageW(m_ownerHwnd, WM_NULL, 0, 0);
 
     DestroyMenu(hMenu);
 }

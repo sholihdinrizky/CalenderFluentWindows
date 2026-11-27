@@ -5,3 +5,10 @@ build/
 *.res
 *.o
 .vscode/
+
+# Python cache and temporary files
+__pycache__/
+*.py[cod]
+
+# Temporary files
+*_tmp*
