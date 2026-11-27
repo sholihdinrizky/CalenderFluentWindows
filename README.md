@@ -1,230 +1,192 @@
 # CalendarFlyout
 
-**A lightweight native Windows calendar with a clean, Fluent-inspired interface.**
+**A simple, lightweight calendar for your Windows desktop.**
 
-CalendarFlyout is a small desktop calendar application that lives in your Windows system tray. It gives you quick access to a monthly calendar without opening a full calendar application or using a web browser.
+CalendarFlyout brings a clean, modern calendar right to your Windows taskbar. Open it whenever you need to check a date — no browser, no account, and no complicated setup.
 
-Built with **C++20 and the native Windows API**, CalendarFlyout is designed to be lightweight, simple, and easy to use.
+<p align="center">
+  <img src="docs/images/calendar-light.png" width="48%" alt="CalendarFlyout Light Mode">
+  <img src="docs/images/calendar-dark.png" width="48%" alt="CalendarFlyout Dark Mode">
+</p>
 
 ---
 
 ## Table of Contents
 
-### 🇮🇩 Bahasa Indonesia
-1. [Tentang CalendarFlyout](#-bahasa-indonesia)
-2. [Fitur](#fitur)
-3. [Tampilan Aplikasi](#tampilan-aplikasi)
-4. [Cara Menggunakan](#cara-menggunakan)
-5. [Persyaratan Sistem](#persyaratan-sistem)
-6. [Cara Build dari Source Code](#cara-build-dari-source-code)
-7. [Lisensi](#lisensi)
-
-### 🇬🇧 English
-1. [About CalendarFlyout](#-english)
-2. [Features](#features)
-3. [Screenshots](#screenshots)
-4. [How to Use](#how-to-use)
-5. [System Requirements](#system-requirements)
-6. [Build from Source](#build-from-source)
-7. [License](#license)
+- [🇮🇩 Bahasa Indonesia](#-bahasa-indonesia)
+  - [Apa itu CalendarFlyout?](#apa-itu-calendarflyout)
+  - [Fitur](#fitur)
+  - [Cara Download dan Menggunakan](#cara-download-dan-menggunakan)
+  - [Pengaturan](#pengaturan)
+  - [Pertanyaan Umum](#pertanyaan-umum)
+- [🇬🇧 English](#-english)
+  - [What is CalendarFlyout?](#what-is-calendarflyout)
+  - [Features](#features)
+  - [How to Download and Use](#how-to-download-and-use)
+  - [Settings](#settings)
+  - [Frequently Asked Questions](#frequently-asked-questions)
+- [License](#license)
 
 ---
 
 # 🇮🇩 Bahasa Indonesia
 
-## Tentang CalendarFlyout
+## Apa itu CalendarFlyout?
 
-CalendarFlyout adalah aplikasi kalender desktop sederhana yang berada di area **system tray** Windows (area ikon kecil di sebelah jam dan tanggal pada taskbar).
+CalendarFlyout adalah aplikasi kalender sederhana untuk Windows.
 
-Dengan satu klik, kamu bisa membuka kalender bulanan tanpa harus membuka aplikasi kalender yang besar.
+Aplikasi ini berada di area ikon kecil dekat jam dan tanggal pada taskbar Windows. Cukup klik ikonnya untuk membuka kalender.
 
-Aplikasi ini dibuat menggunakan C++20 dan API bawaan Windows, bukan menggunakan framework aplikasi web atau browser.
-
-Tujuan CalendarFlyout adalah menyediakan kalender yang:
-- Ringan dan sederhana.
-- Cepat diakses dari taskbar.
-- Memiliki tampilan modern yang terinspirasi desain Fluent Windows.
-- Tidak membutuhkan akun atau koneksi internet untuk fungsi kalender dasarnya.
+Tidak perlu membuat akun, tidak perlu login, dan tidak perlu koneksi internet untuk melihat kalender.
 
 ## Fitur
 
-- **Akses melalui System Tray** — buka kalender langsung dari ikon di taskbar.
-- **Navigasi Bulanan** — berpindah ke bulan sebelumnya dan berikutnya.
-- **Penanda Hari Ini** — tanggal hari ini ditampilkan dengan penanda khusus.
-- **Tema Terang dan Gelap** — tampilan mengikuti tema Windows.
-- **Desain Minimalis** — antarmuka sederhana dengan sudut membulat.
-- **Interaksi Mouse** — dukungan hover dan klik pada elemen kalender.
-- **Run at Startup** — pilihan untuk menjalankan aplikasi otomatis saat Windows dimulai.
-- **Show on Hover** — pilihan untuk membuka kalender ketika kursor diarahkan ke ikon tray.
+- 📅 Kalender bulanan yang mudah digunakan.
+- 🖱️ Buka kalender langsung dari taskbar.
+- ◀️▶️ Berpindah ke bulan sebelumnya dan berikutnya.
+- 📍 Penanda khusus untuk tanggal hari ini.
+- 🌙 Mendukung tampilan terang dan gelap.
+- 🚀 Pilihan untuk menjalankan aplikasi otomatis saat Windows dinyalakan.
+- ✨ Tampilan minimalis dan modern.
 
-## Tampilan Aplikasi
+## Cara Download dan Menggunakan
 
-Berikut beberapa tampilan CalendarFlyout:
+Tidak perlu menginstal program tambahan atau memahami pemrograman.
 
-<!-- Ganti gambar berikut dengan screenshot milikmu -->
-![CalendarFlyout - Light Mode](docs/images/calendar-light.png)
+**Langkah 1 — Download**
 
-![CalendarFlyout - Dark Mode](docs/images/calendar-dark.png)
+Buka halaman berikut:
 
-## Cara Menggunakan
+[Download CalendarFlyout](https://github.com/sholihdinrizky/CalenderFluentWindows/releases)
 
-1. Unduh file aplikasi dari halaman [Releases](https://github.com/sholihdinrizky/CalenderFluentWindows/releases).
-2. Ekstrak file jika aplikasi didistribusikan dalam ZIP.
-3. Jalankan `CalendarFlyout.exe`.
-4. Temukan ikon CalendarFlyout di system tray Windows.
-5. Klik ikon untuk membuka kalender.
+Pilih versi terbaru, kemudian download file aplikasi yang tersedia.
 
-Kamu juga dapat menggunakan menu klik kanan pada ikon tray untuk mengakses pengaturan aplikasi.
+**Langkah 2 — Jalankan aplikasi**
 
-## Persyaratan Sistem
+Jika file yang diunduh berbentuk ZIP:
+1. Klik kanan file ZIP.
+2. Pilih **Extract All**.
+3. Buka folder hasil ekstraksi.
+4. Klik dua kali `CalendarFlyout.exe`.
 
-- Windows 11 (platform utama yang dituju).
-- Arsitektur Windows x64.
-- Tidak membutuhkan koneksi internet untuk fungsi kalender dasar.
+Jika file yang diunduh langsung berupa `.exe`, cukup klik dua kali file tersebut.
 
-Kompatibilitas Windows 10 belum dinyatakan secara resmi dan masih perlu pengujian.
+**Langkah 3 — Buka kalender**
 
-## Cara Build dari Source Code
+Cari ikon CalendarFlyout di area system tray, yaitu di sebelah jam Windows.
 
-Jika ingin mengompilasi aplikasi sendiri, siapkan:
+Klik ikon tersebut untuk membuka kalender.
 
-- Windows 10 atau Windows 11.
-- C++20 compiler (MSYS2 UCRT64 GCC direkomendasikan).
-- CMake versi 3.20 atau lebih baru.
-- Ninja Build.
+Selesai! CalendarFlyout siap digunakan.
 
-### Langkah-langkah
+## Pengaturan
 
-1. Clone repository:
+Klik kanan ikon CalendarFlyout untuk menemukan pengaturan:
 
-   ```bash
-   git clone https://github.com/sholihdinrizky/CalenderFluentWindows.git
-   ```
+- **Run at Startup** — jalankan CalendarFlyout secara otomatis ketika Windows dinyalakan.
+- **Show on Hover** — buka kalender ketika kursor diarahkan ke ikon aplikasi.
+- **Open Calendar** — buka kalender secara manual.
+- **Exit** — tutup aplikasi.
 
-2. Masuk ke folder proyek:
+## Pertanyaan Umum
 
-   ```bash
-   cd CalenderFluentWindows
-   ```
+**Apakah CalendarFlyout gratis?**
 
-3. Jalankan:
+Ya. CalendarFlyout merupakan proyek open-source dengan lisensi MIT.
 
-   ```cmd
-   build.bat
-   ```
+**Apakah harus terhubung ke internet?**
 
-4. Setelah proses build berhasil, file aplikasi akan tersedia di:
+Tidak. Fungsi kalender dasarnya dapat digunakan tanpa koneksi internet.
 
-   ```text
-   build/CalendarFlyout.exe
-   ```
+**Apakah perlu menginstal aplikasi lain?**
 
-## Lisensi
+Tidak ada installer atau framework tambahan yang perlu dipasang untuk menggunakan versi aplikasi yang disediakan.
 
-CalendarFlyout menggunakan **MIT License**.
+**Bagaimana cara menghapusnya?**
 
-Kamu bebas menggunakan, mempelajari, memodifikasi, dan mendistribusikan source code sesuai ketentuan lisensi.
-
-Lihat file [LICENSE](LICENSE) untuk informasi lengkap.
+Tutup aplikasi melalui menu klik kanan ikon CalendarFlyout, lalu hapus file aplikasi atau folder tempat kamu menyimpannya.
 
 ---
 
 # 🇬🇧 English
 
-## About CalendarFlyout
+## What is CalendarFlyout?
 
-CalendarFlyout is a simple desktop calendar application that lives in the **Windows system tray** (the small icon area next to the clock and date on your taskbar).
+CalendarFlyout is a simple calendar application for Windows.
 
-With a single click, you can open a monthly calendar without launching a full calendar application.
+It lives in the small icon area next to your Windows taskbar clock. Simply click its icon to open the calendar.
 
-Built with C++20 and native Windows APIs, CalendarFlyout does not rely on web application frameworks or browser engines.
-
-The goal is to provide a calendar that is:
-- Lightweight and simple.
-- Easily accessible from the taskbar.
-- Designed with a modern, Fluent-inspired Windows interface.
-- Independent of accounts or an internet connection for basic calendar functionality.
+No account, login, or internet connection is required to view the calendar.
 
 ## Features
 
-- **System Tray Access** — open the calendar directly from the taskbar.
-- **Monthly Navigation** — move between previous and next months.
-- **Today Indicator** — highlights the current date.
-- **Light and Dark Themes** — adapts to the Windows theme.
-- **Minimal Design** — a clean interface with rounded corners.
-- **Mouse Interaction** — hover and click support for calendar elements.
-- **Run at Startup** — optionally launch the application when Windows starts.
-- **Show on Hover** — optionally open the calendar when hovering over the tray icon.
+- 📅 Easy-to-use monthly calendar.
+- 🖱️ Quick access from the Windows taskbar.
+- ◀️▶️ Navigate between months.
+- 📍 Highlights today's date.
+- 🌙 Light and dark appearance.
+- 🚀 Optional automatic startup with Windows.
+- ✨ Clean and modern interface.
 
-## Screenshots
+## How to Download and Use
 
-Here are some screenshots of CalendarFlyout:
+No additional programming tools or technical knowledge required.
 
-![CalendarFlyout - Light Mode](docs/images/calendar-light.png)
+**Step 1 — Download**
 
-![CalendarFlyout - Dark Mode](docs/images/calendar-dark.png)
+Visit the page below:
 
-## How to Use
+[Download CalendarFlyout](https://github.com/sholihdinrizky/CalenderFluentWindows/releases)
 
-1. Download the application from the [Releases](https://github.com/sholihdinrizky/CalenderFluentWindows/releases) page.
-2. Extract the downloaded archive if the application is distributed as a ZIP file.
-3. Run `CalendarFlyout.exe`.
-4. Find the CalendarFlyout icon in the Windows system tray.
-5. Click the icon to open the calendar.
+Choose the latest version and download the available application file.
 
-You can also right-click the tray icon to access application settings.
+**Step 2 — Run the application**
 
-## System Requirements
+If you downloaded a ZIP file:
+1. Right-click the ZIP file.
+2. Select **Extract All**.
+3. Open the extracted folder.
+4. Double-click `CalendarFlyout.exe`.
 
-- Windows 11 (primary target platform).
-- Windows x64 architecture.
-- No internet connection required for basic calendar functionality.
+If you downloaded an `.exe` file directly, simply double-click it.
 
-Windows 10 compatibility has not been officially confirmed and still requires testing.
+**Step 3 — Open the calendar**
 
-## Build from Source
+Find the CalendarFlyout icon in the Windows system tray, next to the taskbar clock.
 
-To compile the application yourself, you will need:
+Click the icon to open your calendar.
 
-- Windows 10 or Windows 11.
-- A C++20 compiler (MSYS2 UCRT64 GCC recommended).
-- CMake 3.20 or later.
-- Ninja Build.
+That's it! CalendarFlyout is ready to use.
 
-### Steps
+## Settings
 
-1. Clone the repository:
+Right-click the CalendarFlyout icon to access:
 
-   ```bash
-   git clone https://github.com/sholihdinrizky/CalenderFluentWindows.git
-   ```
+- **Run at Startup** — automatically launch CalendarFlyout when Windows starts.
+- **Show on Hover** — open the calendar when hovering over the application icon.
+- **Open Calendar** — manually open the calendar.
+- **Exit** — close the application.
 
-2. Navigate to the project directory:
+## Frequently Asked Questions
 
-   ```bash
-   cd CalenderFluentWindows
-   ```
+**Is CalendarFlyout free?**
 
-3. Run:
+Yes. CalendarFlyout is an open-source project licensed under MIT.
 
-   ```cmd
-   build.bat
-   ```
+**Does it require an internet connection?**
 
-4. After a successful build, the executable will be available at:
+No. Basic calendar functionality works offline.
 
-   ```text
-   build/CalendarFlyout.exe
-   ```
+**Do I need to install additional software?**
 
-## License
+No additional installer or framework is required to use the provided application build.
 
-CalendarFlyout is licensed under the **MIT License**.
+**How do I uninstall it?**
 
-You are free to use, study, modify, and distribute the source code under the terms of the license.
-
-See the [LICENSE](LICENSE) file for full details.
+Close the application using the right-click tray menu, then delete the application file or its containing folder.
 
 ---
 
-**Made with C++20 and native Windows APIs.**
+## License
+
+CalendarFlyout is distributed under the [MIT License](LICENSE).
