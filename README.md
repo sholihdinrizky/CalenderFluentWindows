@@ -1,13 +1,12 @@
-# CalendarFlyout
+<img width="736" height="760" alt="image" src="https://github.com/user-attachments/assets/bbc199e6-3cc7-40ff-bbfa-16cd7e916a34" /># CalendarFlyout
 
 **A simple, lightweight calendar for your Windows desktop.**
 
 CalendarFlyout brings a clean, modern calendar right to your Windows taskbar. Open it whenever you need to check a date — no browser, no account, and no complicated setup.
 
-<p align="center">
-  <img src="docs/images/calendar-light.png" width="48%" alt="CalendarFlyout Light Mode">
-  <img src="docs/images/calendar-dark.png" width="48%" alt="CalendarFlyout Dark Mode">
-</p>
+![CalendarFlyout Light Mode](docs/images/calendar-light.png)
+
+![CalendarFlyout Dark Mode](docs/images/calendar-dark.png)
 
 ---
 
